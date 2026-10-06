@@ -2,6 +2,9 @@
 builder = "nixpacks"
 buildCommand = "npx prisma generate && npm run build"
 
+[build.nixpacksPlan.variables]
+NIXPACKS_NODE_VERSION = "20"
+
 [deploy]
 startCommand = "npx prisma migrate deploy && npm start"
 restartPolicyType = "on_failure"
