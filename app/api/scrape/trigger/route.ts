@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runDailyScrape } from "@/lib/scraper";
 
-export async function POST(req: NextRequest) {
-  const secret = req.nextUrl.searchParams.get("secret");
+function isAuthorized(req: NextRequest): boolean {
   const expectedSecret = process.env.SCRAPE_TRIGGER_SECRET;
+  if (!expectedSecret) return false;
+  const querySecret = req.nextUrl.searchParams.get("secret");
+  if (querySecret === expectedSecret) return true;
+  const authHeader = req.headers.get("authorization");
+  return authHeader === `Bearer ${expectedSecret}`;
+}
 
-  if (!expectedSecret || secret !== expectedSecret) {
+export async function POST(req: NextRequest) {
+  if (!isAuthorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
