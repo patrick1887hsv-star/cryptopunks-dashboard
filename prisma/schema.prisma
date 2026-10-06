@@ -1,0 +1,142 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model DailySnapshot {
+  id                    Int      @id @default(autoincrement())
+  scrapedAt             DateTime @default(now())
+
+  floorPriceEth         Float
+  floorPriceUsd         Float?
+  floorPriceChange24h   Float?
+  totalForSale          Int?
+  sales24h              Int?
+  salesVolumeEth24h     Float?
+  avgSalePriceEth24h    Float?
+  totalOwners           Int?
+
+  whaleSales24h         Int?
+  whaleVolumeEth24h     Float?
+
+  uniqueBuyers24h       Int?
+  uniqueSellers24h      Int?
+  walletMovements24h    Int?
+
+  sales                 Sale[]
+  listings              Listing[]
+}
+
+model Sale {
+  id                Int           @id @default(autoincrement())
+  snapshotId        Int
+  snapshot          DailySnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  punkId            Int
+  priceEth          Float
+  sellerAddress     String?
+  buyerAddress      String?
+  marketplace       String?
+  txHash            String?       @unique
+  soldAt            DateTime?
+
+  @@index([soldAt(sort: Desc)])
+  @@index([priceEth(sort: Desc)])
+  @@index([buyerAddress])
+  @@index([sellerAddress])
+  @@index([snapshotId])
+}
+
+model Listing {
+  id                Int           @id @default(autoincrement())
+  snapshotId        Int
+  snapshot          DailySnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  punkId            Int
+  askPriceEth       Float
+  sellerAddress     String?
+  listedAt          DateTime?
+
+  @@index([askPriceEth])
+  @@index([snapshotId])
+}
+
+model WhaleWallet {
+  address       String         @id
+  ensName       String?
+  punkCount     Int            @default(0)
+  forSaleCount  Int            @default(0)
+  trend         String?        // "accumulating" | "selling" | "trading" | "holding"
+  buys12m       Int            @default(0)
+  sells12m      Int            @default(0)
+  sent12m       Int            @default(0)
+  received12m   Int            @default(0)
+  offers12m     Int            @default(0)
+  bids12m       Int            @default(0)
+  totalBought   Int            @default(0)
+  totalSold     Int            @default(0)
+  lastTxAt      DateTime?
+  lastScrapedAt DateTime?
+  updatedAt     DateTime       @updatedAt
+  history       WhaleHistory[]
+  events        WhaleEvent[]
+
+  @@index([punkCount(sort: Desc)])
+}
+
+model WhaleHistory {
+  id           Int         @id @default(autoincrement())
+  address      String
+  punkCount    Int
+  forSaleCount Int         @default(0)
+  scrapedAt    DateTime    @default(now())
+  whale        WhaleWallet @relation(fields: [address], references: [address], onDelete: Cascade)
+
+  @@index([address, scrapedAt(sort: Desc)])
+  @@index([scrapedAt(sort: Desc)])
+}
+
+model WhaleEvent {
+  id           Int         @id @default(autoincrement())
+  address      String
+  eventType    String
+  punkId       Int?
+  valueEth     Float?
+  counterparty String?
+  txHash       String?     @unique
+  eventAt      DateTime
+  scrapedAt    DateTime    @default(now())
+  whale        WhaleWallet @relation(fields: [address], references: [address], onDelete: Cascade)
+
+  @@index([eventAt(sort: Desc)])
+  @@index([address, eventAt(sort: Desc)])
+  @@index([eventType])
+}
+
+model WalletStat {
+  address           String   @id
+  ensName           String?
+
+  totalBuys         Int      @default(0)
+  totalSells        Int      @default(0)
+  totalTransactions Int      @default(0)
+
+  totalBuyVolumeEth  Float   @default(0)
+  totalSellVolumeEth Float   @default(0)
+
+  firstSeenAt       DateTime?
+  lastSeenAt        DateTime?
+
+  avgDaysBetweenTx  Float?
+  lastTxAt          DateTime?
+  daysSinceLastTx   Int?
+
+  updatedAt         DateTime @updatedAt
+
+  @@index([totalTransactions(sort: Desc)])
+  @@index([lastSeenAt(sort: Desc)])
+}
